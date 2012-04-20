@@ -1,0 +1,1234 @@
+<?php
+/*
+    This file is part of FoxyIDX.
+
+    Foobar is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    FoxyIDX is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+
+    Author: Brian P Johnson
+    Contact: brian@pjohnson.info
+*/
+
+
+function foxyidx_help($path, $arg) {
+
+	switch ( $path ) {
+		case 'admin/help#foxyidx':
+			$output = '';
+			$output .= '<h2>' . t('About FoxyIDX') . '</h2>';
+			$output .= '<h>' . t('Foxy is your best friend, she tracks down customers.') . '</h3>';
+			return $output;
+	}
+}
+
+function foxyidx_block_info() {
+
+	$blocks = array();
+	$blocks['foxyidx_search'] = array(
+			'info' => t('FoxyIDX Configurable Search Panel'),
+			'cache' => DRUPAL_NO_CACHE,
+			);
+	$blocks['foxyidx_results'] = array(
+			'info' => t('FoxyIDX Configurable Results Panel'),
+			'cache' => DRUPAL_NO_CACHE,
+			);
+	$blocks['foxyidx_property'] = array(
+			'info' => t('FoxyIDX Configurable Property Panel'),
+			'cache' => DRUPAL_NO_CACHE,
+			);
+	return $blocks;
+
+}
+
+function foxyidx_get_search_fields() {
+
+	$today = getdate();
+	$start_time = mktime(0, 0, 0,$today['mon'],($today['mday'] - 7), $today['year']);
+	$end_time = time();
+
+	$query = db_select('foxyidx_fields', 'ff')
+		->fields('ff', array('foxyidx_SystemName', 'foxyidx_LongName', 'foxyidx_DataType', 'foxyidx_MaximumLength', 'foxyidx_Precision', 'foxyidx_Interpretation', 'foxyidx_LookupName', 'foxyidx_MaxSelect', 'foxyidx_Required'))
+		->condition('foxyidx_Searchable', 1)
+		->orderBy('foxyidx_SystemName', 'DESC')
+		->groupBy('ff.foxyidx_SystemName')
+		->range(0,1000)
+		->execute(); 
+	return $query; 
+
+}
+
+function foxyidx_block_configure( $delta = '' ) {
+
+	$search_criteria = variable_get('foxyidx_search_criteria');
+	if( !is_array($search_criteria) ) $search_criteria = array();
+
+	$result = foxyidx_get_search_fields();
+	$options = array();
+	$options[''] = "(None)";
+	foreach( $result as $record ) {
+		$options[$record->foxyidx_systemname] = $record->foxyidx_longname;
+		$fields[$record->foxyidx_systemname] = array(
+				'datatype' => $record->foxyidx_datatype,
+				'maximumlength' => $record->foxyidx_maximumlength,
+				'required' => $record->foxyidx_required,
+				);
+		if( $record->foxyidx_required ) {
+			$search_criteria[$record->foxyidx_systemname] = array(
+					'systemname' => $record->foxyidx_systemname,
+					'required' => true,
+					);
+		}
+	}
+
+	variable_set('foxyidx_search_criteria', $search_criteria);
+
+	$form = array();
+	$path = drupal_get_path('module', 'foxyidx');
+	switch( $delta ) {
+		case 'foxyidx_search':
+			$form['#attached'] = array (
+					'css' => array (
+						'type' => 'file',
+						'data' => $path . '/foxyidx_search.css',
+						),
+					'js' => array (
+						'type' => 'file',
+						'data' => $path . '/foxyidx_search.js',
+						),
+					);
+			$form['fields'] = array (
+					'#type' => 'container',
+					'#attributes' => array (
+						'class' => array (
+							'foxyidx_fields',
+							)
+						),
+					'#tree' => FALSE,
+					);
+			if( is_array($search_criteria) ) {
+				foreach( $search_criteria as $position => $field ) {
+					$form['fields'][$field['systemname']] = array (
+							'#type' => 'container',
+							'#attributes' => array (
+								'class' => array (
+									'foxyidx_field',
+									)
+								),
+							);
+					$form['fields'][$field['systemname']]['field'] = array(
+							'#type' => 'item',
+							'#title' => $options[$field['systemname']],
+							'#attributes' => array (
+								'class' => array (
+									'foxyidx_field_name',
+									)
+								),
+							);
+					if(!$field['required'])
+						$form['fields'][$field['systemname']]['remove'] = array(
+								'#name' => $field,
+								'#type' => 'submit',
+								'#value' => 'remove',
+								'#submit' => array('foxyidx_search_criteria_save'),
+								'#attributes' => array (
+									'field_system_id' => $field,
+									'class' => array (
+										'foxyidx_field_remove',
+										),
+									'style' => 'padding:3px;margin:0px;',
+									),
+								);
+				}
+			}
+			$form['fields']['new'] = array(
+					'#type' => 'container',
+					'#attributes' => array (
+						'class' => array (
+							'foxyidx_field_add',
+							)
+						),
+					);
+			$form['fields']['new']['field'] = array(
+					'#type' => 'select',
+					'#options' => $options,
+					'#default_value' => '',
+					'#attributes' => array (
+						'class' => array (
+							'foxyidx_field_add_name',
+							)
+						),
+					);
+			$form['fields']['new']['add'] = array(
+					'#type' => 'submit',
+					'#value' => 'add',
+					'#submit' => array('foxyidx_search_criteria_save'),
+					'#attributes' => array (
+						'class' => array (
+							'foxyidx_field_add_submit',
+							)
+						),
+					);
+			$form['fields']['submit'] = array(
+					'#type' => 'submit',
+					'#value' => 'save fields',
+					'#submit' => array('foxyidx_search_criteria_save'),
+					'#attributes' => array (
+						'class' => array (
+							'foxyidx_fields_submit',
+							)
+						),
+					);
+
+			break;
+		default:
+	}
+	return $form;
+
+}
+
+function foxyidx_search_criteria_save( $form, $form_state ) {
+	header('Content-Type: text/plain');
+	$search_criteria = variable_get('foxyidx_search_criteria');
+	if(!is_array($search_criteria)) $search_criteria = array();
+	if( $form_state['triggering_element']['#value'] == "remove" ) {
+		$remove_field = $form_state['triggering_element']['#attributes']['field_system_id']['systemname'];
+		unset($search_criteria[$remove_field]);
+	}
+
+	$new_field = $form['settings']['fields']['new']['field']['#value'];
+	if($new_field != '') {
+		$search_criteria[$new_field] = array(
+				'systemname' => $new_field,
+				'required' => false,
+				);
+	}
+	variable_set('foxyidx_search_criteria', $search_criteria);
+
+}
+
+function foxyidx_block_save( $delta = '', $edit = array() ) {
+	switch( $delta ) {
+		case 'foxyidx_search':
+			$new_field = $edit['new']['new_foxyidx_search_criteria'];
+			$search_criteria = variable_get('foxyidx_search_criteria');
+			if(!is_array($search_criteria)) $search_criteria = array();
+			if($new_field != '') $search_criteria[] = $new_field;
+			variable_set('foxyidx_search_criteria', $search_criteria);
+			break;
+		default:
+
+	}
+}
+
+
+function foxyidx_block_view( $delta = '' ) {
+
+	switch( $delta ) {
+		case 'foxyidx_search':
+			$block['subject'] = t('Search for Properties');
+			if( user_access('access content') ) {
+
+				$result = foxyidx_contents('block');
+				$items = array();
+				foreach ( $result as $node ) {
+					$items[] = array (
+							'data' => l($node->title, 'node/' . $node->nid),
+							); 
+				}
+				if ( empty($items) ) {
+					$block['content'] = t('No posts available.');  
+				}
+				else {
+					$block['content']['posts'] = array (
+							'#theme' => 'item_list__foxyidx__block',
+							'#items' => $items,
+							);
+					$block['content']['more'] = array (
+							'#theme' => 'more_link__foxyidx',
+							'#url' => 'foxyidx',
+							'#title' => t('See the Property'),
+							);
+				}
+			}
+			else {
+				$result = array();
+			}
+	}
+	return $block;
+}
+
+function foxyidx_menu() {
+
+	$items = array();  
+
+	$items['admin/config/services/foxyidx'] = array(
+			'title' => 'FoxyIDX',
+			'description' => 'Configuration for FoxyIDX module',
+			'page callback' => 'drupal_get_form',
+			'page arguments' => array('foxyidx_form'),
+			'access arguments' => array('access administration pages'),
+			'type' => MENU_NORMAL_ITEM,
+			);
+	$items['foxyidx'] = array(
+			'title' => 'Foxy IDX Property',
+			'page callback' => '_foxyidx_page',
+			'access arguments' => array('access foxyidx content'),
+			'type' => MENU_CALLBACK,
+			);
+
+	return $items;
+}  
+
+function foxyidx_form( $form, &$form_state ) {
+
+	$form['foxyidx'] = array (
+			'#type' => 'fieldset', 
+			'#title' => t('FoxyIDX Configuration'), 
+			'#collapsible' => TRUE, 
+			'#collapsed' => FALSE,
+			'#tree' => FALSE, 
+			'#weight' => -2,
+			);
+	$form['foxyidx']['credentials'] = array (
+			'#type' => 'fieldset', 
+			'#title' => t('RETS Credentials'), 
+			'#collapsible' => TRUE, 
+			'#collapsed' => TRUE,
+			'#tree' => FALSE, 
+			'#weight' => 2,
+			);
+	$form['foxyidx']['basic_setup'] = array (
+			'#type' => 'fieldset', 
+			'#title' => t('Basic Setup'), 
+			'#collapsible' => TRUE, 
+			'#collapsed' => FALSE,
+			'#tree' => FALSE, 
+			'#weight' => 1,
+			);
+	$form['foxyidx']['credentials']['foxyidx_rets_username'] = array (
+			'#type' => 'textfield',
+			'#title' => t('RETS IDX Username'),
+			'#default_value' => variable_get('foxyidx_rets_username', ''),
+			'#size' => 20,
+			'#maxlength' => 20,
+			'#description' => t('The username issued to you by RETS.'),
+			'#required' => TRUE,
+			);
+	$form['foxyidx']['credentials']['foxyidx_rets_password'] = array (
+			'#type' => 'textfield',
+			'#title' => t('RETS IDX Password'),
+			'#default_value' => variable_get('foxyidx_rets_password', ''),
+			'#size' => 20,
+			'#maxlength' => 20,
+			'#description' => t('The password issued to you by RETS.'),
+			'#required' => TRUE,
+			);
+	$form['foxyidx']['credentials']['foxyidx_rets_useragent'] = array (
+			'#type' => 'textfield',
+			'#title' => t('RETS IDX user agent'),
+			'#default_value' => variable_get('foxyidx_rets_useragent', ''),
+			'#size' => 20,
+			'#maxlength' => 20,
+			'#description' => t('The useragent issued to you by RETS.'),
+			'#required' => TRUE,
+			);
+	$form['foxyidx']['basic_setup']['foxyidx_agent_name'] = array (
+			'#type' => 'textfield',
+			'#title' => t('Agent Display Name'),
+			'#default_value' => variable_get('foxyidx_agent_name', ''),
+			'#size' => 40,
+			'#maxlength' => 40,
+			'#description' => t('Your name, for display on listings.'),
+			'#required' => TRUE,
+			);
+	$form['foxyidx']['basic_setup']['foxyidx_agent_number'] = array (
+			'#type' => 'textfield',
+			'#title' => t('Agent Display Phone Number'),
+			'#default_value' => variable_get('foxyidx_agent_number', ''),
+			'#size' => 40,
+			'#maxlength' => 40,
+			'#description' => t('Your phone number, for display on listings.'),
+			'#required' => TRUE,
+			);
+	$form['foxyidx']['basic_setup']['foxyidx_rets_url'] = array (
+			'#type' => 'textfield',
+			'#title' => t('RETS IDX url'),
+			'#default_value' => variable_get('foxyidx_rets_url', 'http://aus.rets.interealty.com'),
+			'#size' => 40,
+			'#maxlength' => 40,
+			'#description' => t('The url issued to you by RETS.'),
+			'#required' => TRUE,
+			);
+	$form['foxyidx']['basic_setup']['foxyidx_rets_update_frequency'] = array (
+			'#type' => 'select',
+			'#title' => t('RETS IDX update frequeqncy'),
+			'#default_value' => variable_get('foxyidx_rets_update_frequency', 'oneday'),
+			'#description' => t('The update frequency for pulling from RETS.'),
+			'#required' => TRUE,
+			'#options' => array (
+				'oneday' => t('One day'),
+				'twoday' => t('Two day'),
+				'threeday' => t('Three day'),
+				'fourday' => t('Four day'),
+				'oneweek' => t('One week'),
+				'twoweek' => t('Two weeks'),
+				)
+			);
+
+	return system_settings_form( $form );
+}
+
+function foxyidx_form_alter( &$form, $form_state, $form_id ) {
+
+	$form['xray_display_form_id'] = array( 
+			'#type' => 'item', 
+			'#title' => t('Form ID'), 
+			'#markup' => $form_id, 
+			'#theme_wrappers' => array('container__xray__form'), 
+			'#attributes' => array('class' => array('xray')), 
+			'#weight' => -100, 
+			); 
+	if ( !empty($form['foxyidx_rets_url']) ) {
+
+		$form['foxyidx'] = array (
+				'#type' => 'fieldset', 
+				'#title' => t('Example vertical tab'), 
+				'#collapsible' => TRUE, 
+				'#collapsed' => FALSE,
+				'#group' => 'additional_settings',
+				'#tree' => FALSE, 
+				'#weight' => -2,
+				);
+
+		$form['foxyidx']['enabled'] = array (
+				'#type' => 'checkbox', 
+				'#title' => t('Use custom configuration'), 
+				'#default_value' => FALSE,
+				);
+
+		$form['foxyidx']['foxyidxcontainer'] = array (
+				'#type' => 'container', 
+				'#parents' => array('foxyidx'), 
+				'#states' => array(
+					'invisible' => array(
+						'input[name="foxyidx[enabled]"]' => array('checked' => FALSE),
+						),
+					),
+				);
+
+		$form['foxyidx']['foxyidxcontainer']['custom_setting'] = array (
+				'#type' => 'textfield', 
+				'#title' => t('Use this custom setting'), 
+				'#default_value' => '',
+				);
+	}
+}
+
+
+function foxyidx_form_validate ( $form, &$form_state ) {
+
+}
+
+function foxyidx_permission () {
+	return array (
+			'access foxyidx content' => array (
+				'title' => t('Access content for the FoxyIDX module'),
+				)  
+			);  
+}
+
+function _foxyidx_page () {
+
+	drupal_set_title('Property Page');
+	$result = foxyidx_contents('listing');
+	$items = array();
+	foreach ($result as $node ) {
+		$items[] = array (
+				'data' => l($node->title, 'node/'.$node->nid),
+				);
+	}
+	if(empty($items)) {
+		$page_array['foxyidx_arguments'] = array (
+				'#title' => t('A Property'),
+				'#markup' => t('None available'),
+				);
+		return $page_array;
+	}
+	else {
+		$page_array['foxyidx_arguments'] = array (
+				'#title' => t('Property'),
+				'#items' => $items,
+				'#theme' => 'item_list__foxyidx',
+				);
+		return $page_array;
+	}
+}
+
+/**
+ * Implements hook_cron().
+ *
+ * Update fields and lookups.
+ */
+function foxyidx_cron () {
+
+	set_time_limit(0);
+
+	$props = db_select('foxyidx_property', 'fpa')
+		->fields('fpa', array(
+					'foxyidx_id'
+					))
+		->condition('fpa.foxyidx_date', date('Ymd') , '>=')
+		->execute();
+
+	if (!($props->rowCount() > 0 )) foxyidx_grab_properties();
+
+	$props = db_select('foxyidx_fields', 'fpa')
+		->fields('fpa', array(
+					'foxyidx_id'
+					))
+		->condition('fpa.foxyidx_date', date('Ymd') , '>=')
+		->execute();
+
+	if (!($props->rowCount() > 0 )) {
+		foxyidx_grab_fields();
+	}
+	listing_install();
+
+	$props = db_select('foxyidx_lookup_table', 'fpa')
+		->fields('fpa', array(
+					'foxyidx_id'
+					))
+		->condition('fpa.foxyidx_date', date('Ymd') , '>=')
+		->execute();
+
+	if (!($props->rowCount() > 0 )) foxyidx_grab_lookups();
+
+
+	foxyidx_create_property_nodes();
+
+}
+
+function foxyidx_grab_fields () {
+
+	$objIDX = createIDX();
+	$objIDX->loadFields();
+	foreach( $objIDX->fields as $classID => $fields ) {
+		foreach( $fields as $fieldID => $f ) {
+			$data = array (
+					'foxyidx_Date' => date('Ymd'),
+					'foxyidx_ClassID' => ''.$classID,
+					'foxyidx_SystemName' => (isset($f['SystemName']) ? ''.$f['SystemName'] : ''),
+					'foxyidx_LongName' => (isset($f['LongName']) ? ''.$f['LongName'] : ''),
+					'foxyidx_DataType' => (isset($f['DataType']) ? ''.$f['DataType'] : ''),
+					'foxyidx_MaximumLength' => (isset($f['MaximumLength']) ? intval($f['MaximumLength']) : ''),
+					'foxyidx_Precision' => (isset($f['Precision']) ? intval($f['Precision']) : ''),
+					'foxyidx_UseSeparator' => (isset($f['UseSeparator']) ? intval($f['UseSeparator']) : ''),
+					'foxyidx_Interpretation' => (isset($f['Interpretation']) ? ''.$f['Interpretation'] : ''),
+					'foxyidx_LookupName' => (isset($f['LookupName']) ? ''.$f['LookupName'] : ''),
+					'foxyidx_MaxSelect' => (isset($f['MaxSelect']) ? intval($f['MaxSelect']) : ''),
+					'foxyidx_Searchable' => (isset($f['Searchable']) ? intval($f['Searchable']) : ''),
+					'foxyidx_Required' => (isset($f['Required']) ? intval($f['Required']) : '')
+					);
+			$fid = db_insert('foxyidx_fields')->fields($data)->execute();
+		}
+	}
+}
+
+function foxyidx_grab_lookups () {
+
+	$objIDX = createIDX();
+	$objIDX->loadLookups();
+	foreach( $objIDX->lookups as $classID => $lookups ) {
+		foreach( $lookups as $lookupID => $lookupSet ) {
+			foreach( $lookupSet as $value => $f ) {
+				$data = array (
+						'foxyidx_Date' => date('Ymd'),
+						'foxyidx_ClassID' => ''.$classID,
+						'foxyidx_LookupName' => ''.$lookupID,
+						'foxyidx_LongValue' => (isset($f['LongValue']) ? ''.$f['LongValue'] : ''),
+						'foxyidx_ShortValue' => (isset($f['ShortValue']) ? ''.$f['ShortValue'] : ''),
+						'foxyidx_Value' => (isset($f['Value']) ? ''.$f['Value'] : ''),
+						);
+				$fid = db_insert('foxyidx_lookup_table')->fields($data)->execute();
+			}
+		}
+	}
+}
+
+function createIDX() {
+
+	require_once('code/classes/objIDX.pclass');
+	$user = variable_get('foxyidx_rets_username', '');
+	$password = variable_get('foxyidx_rets_password', '');
+	$useragent = variable_get('foxyidx_rets_useragent', ''); 
+	$url = variable_get('foxyidx_rets_url', ''); 
+	$objIDX = new objIDX($user, $password, $useragent, $url);
+	return $objIDX;
+}
+
+function foxyidx_grab_properties () {
+
+	$objIDX = createIDX();
+	$objIDX->loadSearch( array(33 => 'Austin', 79 => '|A,AC'), 4, 100 );
+
+	foreach( $objIDX->search as $property => $attributes ) {
+
+		$data = array (
+				'foxyidx_class_id' => '4',
+				'foxyidx_date' => date('Ymd'),
+				);
+		$f_p_id = db_insert('foxyidx_property')->fields($data)->execute();
+
+		foreach( $attributes as $sysName => $value ) {
+
+			$data = array (
+					'foxyidx_property_id' => $f_p_id,
+					'foxyidx_system_name' => ''.$sysName,
+					'foxyidx_date' => date('Ymd'),
+					'foxyidx_value' => ''.$value,
+					);
+
+			$f_p_a_id = db_insert('foxyidx_property_attribute')->fields($data)->execute();
+		}
+	}
+}
+
+function foxyidx_load_properties ( $limit = 100 ) {
+
+	$properties = db_select('foxyidx_property', 'fp')
+		->fields('fp', array(
+					'foxyidx_id',
+					'foxyidx_class_id',
+					'foxyidx_node_id',
+					'foxyidx_date'
+					))
+		->orderBy('fp.foxyidx_id', 'DESC')
+		->range(0, $limit)
+		->execute(); 
+	return $properties;
+}
+
+function foxyidx_load_attributes ( $pid ) { 
+
+	$attributes = db_select('foxyidx_property_attribute', 'fpa')
+		->fields('fpa', array(
+					'foxyidx_id',
+					'foxyidx_property_id',
+					'foxyidx_system_name',
+					'foxyidx_date',
+					'foxyidx_value'
+					))
+		->condition('fpa.foxyidx_property_id', $pid)
+		->execute();
+	return $attributes;
+}
+
+function foxyidx_load_fields ( $classID,  $sName ) {
+
+	$fields = db_select('foxyidx_fields', 'ff')
+		->fields('ff', array(
+					'foxyidx_id',
+					'foxyidx_Date',
+					'foxyidx_ClassID',
+					'foxyidx_SystemName',
+					'foxyidx_LongName',
+					'foxyidx_DataType',
+					'foxyidx_MaximumLength',
+					'foxyidx_Precision',
+					'foxyidx_UseSeparator',
+					'foxyidx_Interpretation',
+					'foxyidx_LookupName',
+					'foxyidx_MaxSelect',
+					'foxyidx_Searchable',
+					'foxyidx_Required'
+					))
+		->condition('ff.foxyidx_ClassID', $classID)
+		->condition('ff.foxyidx_SystemName', $sName)
+		->groupBy('ff.foxyidx_SystemName')
+		->orderBy('ff.foxyidx_LongName', 'ASC')
+		->execute();
+	return $fields;
+}
+
+function foxyidx_load_all_fields_m ( $classID ) {
+
+	$fields = db_select('foxyidx_fields', 'ff')
+		->fields('ff', array(
+					'foxyidx_id',
+					'foxyidx_Date',
+					'foxyidx_ClassID',
+					'foxyidx_SystemName',
+					'foxyidx_LongName',
+					'foxyidx_DataType',
+					'foxyidx_MaximumLength',
+					'foxyidx_Precision',
+					'foxyidx_UseSeparator',
+					'foxyidx_Interpretation',
+					'foxyidx_LookupName',
+					'foxyidx_MaxSelect',
+					'foxyidx_Searchable',
+					'foxyidx_Required'
+					))
+		->condition('ff.foxyidx_ClassID', $classID)
+		->groupBy('ff.foxyidx_SystemName')
+		->orderBy('ff.foxyidx_LongName', 'ASC')
+		->execute();
+	return $fields;
+}
+
+function foxyidx_load_lookups ( $classID, $lName ) {
+
+	$lookups = db_select('foxyidx_lookup_table', 'flt')
+		->fields('ff', array(
+					'foxyidx_id',
+					'foxyidx_Date',
+					'foxyidx_ClassID',
+					'foxyidx_LookupName',
+					'foxyidx_LongValue',
+					'foxyidx_ShortValue',
+					'foxyidx_Value'
+					))
+		->condition('flt.foxyidx_ClassID', $classID)
+		->condition('flt.foxyidx_LookupName', $lName)
+		->orderBy('flt.foxyidx_LookupName', 'ASC')
+		->execute();
+	return $lookups;
+}
+
+function foxyidx_create_property_nodes ( ) {
+
+	$properties = foxyidx_load_properties( 10 );
+	foreach( $properties as $property ) {
+
+		$attributes = foxyidx_load_attributes($property->foxyidx_id);
+		$body_text = '';
+		$pa = array();
+		foreach( $attributes as $attribute ) {
+
+			$fields = foxyidx_load_fields(
+					$property->foxyidx_class_id, 
+					$attribute->foxyidx_system_name
+					);
+			$firstField = $fields->fetchObject();
+			$pa[$firstField->foxyidx_longname] = $attribute->foxyidx_value;
+
+		}
+
+		$node = new stdClass();
+		$node->type = 'listing';
+		$node->language = LANGUAGE_NONE;
+
+		node_object_prepare($node);
+
+		$all_fields = foxyidx_load_all_fields_m('4');
+		$error = "";
+		$fp = fopen('/tmp/fields','a+');
+		while($field_info = $all_fields->fetchObject()) {
+
+			fwrite($fp, var_export($field_info,true));
+			$field_ref = "field_".$field_info->foxyidx_systemname;
+			$field_arr = array(
+					$node->language => array(
+						0 => array(
+							'value' => $pa[$field_info->foxyidx_longname],
+							),
+						)
+					);
+			$node->$field_ref = $field_arr;
+		}
+		fclose($fp);
+
+		$node->title = "{$pa['Street Number']} {$pa['Street Name']} \n{$pa['City']} {$pa['State']} {$pa['Zip']}\n\${$pa['List Price']} | MLS # {$pa['MLS #']}";
+
+		$count = 0;
+		while(1) {	
+			$objIDX = createIDX();
+			$file = array();
+			$image = $objIDX->getPhoto($pa['sysid'],$count);
+			if(!preg_match('/ReplyCode/', $image)) {
+				$image_file = file_save_data($image);
+				$file = $image_file;
+				$file->uid = 1;
+				$node->field_image[$node->language][$count] = (array)$file;
+			}
+			else break;
+			$count++;
+		}
+
+		$path = ''.$pa['State'].'/'.$pa['City'].'/'.$pa['Zip'].'/'.preg_replace('/ /','_',$pa['Street Number']).'-'.preg_replace('/ /','-',$pa['Street Name']);
+		$node->path = array('alias' => $path);
+
+		$node = node_submit($node);
+
+		node_save($node);
+	}
+}
+
+function foxyidx_node_view($node, $view_mode, $lang_code) {
+	if($node->type == 'listing') {
+		drupal_add_js('http://maps.googleapis.com/maps/api/js?sensor=true', 'external');
+	}
+}
+
+function foxyidx_preprocess_node( &$vars ) {
+	$vars['theme_hook_suggestions'][] = 'node__' . $vars['type'] . '__' . $vars['view_mode'];
+
+}
+
+function foxyidx_js_alter($javascript) {
+	$javascript['foxyidx']['data'] = drupal_get_path('module', 'foxyidx') . '/listing.js';
+}
+
+function foxyidx_theme_registry_alter(&$theme_registry) {
+	$mod_path = drupal_get_path('module', 'foxyidx');
+	$theme_registry_copy = $theme_registry;       // munge on a copy
+	_theme_process_registry($theme_registry_copy, 'phptemplate', 'theme_engine', 'pow', $mod_path);
+	$theme_registry += array_diff_key($theme_registry_copy, $theme_registry);
+	$hooks = array('node');
+	foreach ($hooks as $h) {
+		_foxyidx_insert_after_first_element($theme_registry[$h]['theme paths'], $mod_path);
+	}
+}
+
+function _foxyidx_insert_after_first_element(&$a, $element) {
+	if(is_array($a)) {
+		$first_element = array_shift($a);
+		array_unshift($a, $first_element, $element);
+	}
+}
+
+function listing_install() {
+
+  // get the translation function relevant to our current localisation
+  $t = get_t();
+  // define the content type as an array (same as in hook_node_info())
+  $listing = array(
+    'type' => 'listing',
+    'name' => $t('Listing'),
+    'base' => 'node_content',
+    'description' => $t('Content type to handle listings.'),
+    'body_label' => $t('Listing Description'),
+    'promote' => 0,
+    'status' => 1,
+    'comment' => 0,
+  );
+
+  // set default values for anything not explicitly defined in the above array
+  $content_type = node_type_set_defaults($listing);
+
+  // add the body field to the content type
+  node_add_body_field($content_type, 'Body');
+
+  // create the content type
+  node_type_save($content_type);
+
+  variable_set('node_options_listing', array('status'));
+  // hide comments for this node. http://api.drupal.org/api/drupal/modules--comment--comment.module/7
+  variable_set('comment_listing', 'COMMENT_NODE_HIDDEN');
+
+  // Hide date and author information
+  variable_set('node_submitted_listing', FALSE);
+
+  // Create all the fields we are adding to our content type.
+  // http://api.drupal.org/api/function/field_create_field/7
+  // http://api.drupal.org/api/function/field_create_instance/7
+	$cck = _listing_instance_fields_m();
+	foreach ($cck['fields'] as $index => $field) {
+		if(is_null(field_info_field($index))) {
+			field_create_field($cck['fields'][$index]);
+			$instance = $cck['instances'][$index];
+			$instance['entity_type'] = 'node';
+			$instance['bundle'] = 'listing';
+			field_create_instance($instance);
+		}
+	}
+
+  // adjust the weight so it's called after a dependant module called 'categories'
+  $weight = db_query("SELECT weight FROM {system} WHERE name = :name", array(':name' => 'categories'))->fetchField();
+  db_update('system')->fields(array(
+    'weight' => $weight + 1,
+  ))
+  ->condition('name', 'listing')
+  ->execute();
+}
+
+function _listing_instance_fields_m() {
+
+	$all_fields = foxyidx_load_all_fields_m('4');
+
+	$cck = array();
+	$cck['fields'] = array();
+	$cck['instances'] = array();
+
+	$dataTypes = array(
+			"Int" => "Integer",
+			"Decimal" => "Decimal",
+			"Character" => "text",
+			"Small" => "Integer",
+			"DateTime" => "text"
+			);
+
+	while($field_info = $all_fields->fetchObject()) {
+		
+		$field_ref = "field_".$field_info->foxyidx_systemname;
+		$field_type = $dataTypes[$field_info->foxyidx_datatype];
+		$label = $field_info->foxyidx_longname;
+		$length = $field_info->foxyidx_maximumlength;
+
+		if($length <= 256) {
+
+			$cck['fields'][$field_ref] = array(
+					'field_name' => $field_ref,
+					'label' => t($label),
+					'cardinality' => 1,
+					'type' => 'text',
+					);
+			$cck['instances'][$field_ref] = array(
+					'field_name'  => $field_ref,
+					'label'       => t($label),
+					'cardinality' => 1,
+					'widget'      => array(
+						'type'       => 'text_textfield',
+						'settings'   => array('size' => $length),
+						),
+					'display' => array(
+						'default' => array(
+							'label' => 'hidden',
+							'type' => 'text_default',
+							'settings' => array(),
+							'weight' => 0,
+							),
+						),
+					);
+		}
+		else {
+			$cck['fields'][$field_ref] = array(
+					'field_name' => $field_ref,
+					'label' => t($label),
+					'cardinality' => 1,
+					'type' => 'text_with_summary',
+					);
+			$cck['instances'][$field_ref] = array(
+					'field_name'  => $field_ref,
+					'label'       => t($label),
+					'cardinality' => 1,
+					'widget' => array(
+						'type' => 'text_textarea_with_summary',
+						'settings' => array(
+							'rows' => 10,
+							'summary_rows' => 3,
+							),
+						'weight' => 0,
+						),
+					'settings' => array(
+						'display_summary' => TRUE,
+						'text_processing' => 1, // @TODO Find out the name
+						),
+					'display' => array(
+						'default' => array(
+							'label' => 'hidden',
+							'type' => 'text_default',
+							'settings' => array(),
+							'weight' => 0,
+							),
+						),
+					);
+		}
+	}
+	$cck['fields']['field_image'] = array(
+			'field_name' => 'field_image',
+			'label' => t('Listing Image'),
+			'cardinality' => 1,
+			'type' => 'text_with_summary',
+			);
+	$cck['instances']['field_image'] = array(
+			'field_name'  => 'field_image',
+			'label'       => t('Listing Image'),
+			'cardinality' => 1,
+			'widget' => array(
+				'type' => 'text_textarea_with_summary',
+				'settings' => array(
+					'rows' => 10,
+					'summary_rows' => 3,
+					),
+				'weight' => 0,
+				),
+			'settings' => array(
+				'display_summary' => TRUE,
+				'text_processing' => 1, // @TODO Find out the name
+				),
+			'display' => array(
+				'default' => array(
+					'label' => 'hidden',
+					'type' => 'text_default',
+					'settings' => array(),
+					'weight' => 0,
+					),
+				),
+			);
+	return $cck;
+}
+/*
+	$fieldlabels = array(
+			"Prop Type" => "prop_type",
+			"Listing Agent Phone" => "listing_agent_phone",
+			"Listing Office Fax" => "listing_office_fax",
+			"Listing Office Name" => "listing_office_name",
+			"Listing Office Phone" => "listing_office_phone",
+			"Buyer/Sub Office Name" => "buyer_sub_office_name",
+			"Listing Agent 2 Phone" => "listing_agent_2_phone",
+			"Buyer/Sub Office Phone" => "buyer_sub_office_phone",
+			"Search Expire Date" => "search_expire_date",
+			"Option Date" => "option_date",
+			"Out of Area City" => "out_of_area_city",
+			"Owner Name" => "owner_name",
+			"Owner Phone" => "owner_phone",
+			"Owner Other Phone" => "owner_other_phone",
+			"Exemptions" => "exemptions",
+			"Pending Backup Date" => "pending_backup_date",
+			"Pending Date" => "pending_date",
+			"State" => "state",
+			"Number of Images" => "number_of_images",
+			"Street Type" => "street_type",
+			"Street Post Dir" => "street_post_dir",
+			"SPOLP" => "spolp",
+			"Virtual Tour Link-Branded" => "virtual_tour_link_branded",
+			"Listing Agent 2 Name" => "listing_agent_2_name",
+			"Pool on Property" => "pool_on_property",
+			"Property Type" => "property_type",
+			"Tentative Close Date" => "tentative_close_date",
+			"Auction Date" => "auction_date",
+			"Possession" => "possession",
+			"Actual Tax" => "actual_tax",
+			"Realtor.com" => "realtor_com",
+			"Region" => "region",
+			"Price Change Date" => "price_change_date",
+			"ADOM" => "adom",
+			"Condition" => "condition",
+			"CDOM Adjustment" => "cdom_adjustment",
+			"Lockbox Type" => "lockbox_type",
+			"HOA Y/N?" => "hoa_y_n",
+			"SP$/LP$ %" => "sp_lp",
+			"Address Internet" => "address_internet",
+			"1st Right of Refusal Y/N" => "first_right_of_refusal_y_n",
+			"Property Condition at Sale" => "property_condition_at_sale",
+			"SUBA" => "suba",
+			"Buyer/Sub Agent Name" => "buyer_sub_agent_name",
+			"SUBC" => "subc",
+			"AdjustedCDOM" => "adjustedcdom",
+			"Sold/Lease$/SqFt" => "sold_lease_sqft",
+			"View" => "view",
+			"Photo Exist" => "photo_exist",
+			"Auction Y/N?" => "auction_y_n",
+			"Refusal Hrs" => "refusal_hrs",
+			"9 Gr/High Other" => "ninth_gr_high_other",
+			"Country" => "country",
+			"Elem A Other" => "elem_a_other",
+			"Agent Remarks" => "agent_remarks",
+			"Elem B Other" => "elem_b_other",
+			"Foreclosure/REO" => "foreclosure_reo",
+			"Foreclosure/REO Type" => "foreclosure_reo_type",
+			"Green Building Rating" => "green_building_rating",
+			"HOA Name" => "hoa_name",
+			"Insulation" => "insulation",
+			"Insulation Rating" => "insulation_rating",
+			"Junior Other" => "junior_other",
+			"Land SQFT" => "land_sqft",
+			"Internet Remarks" => "internet_remarks",
+			"Middle Other" => "middle_other",
+			"Multiple PIDs" => "multiple_pids",
+			"Out of Area County" => "out_of_area_county",
+			"Out of Area School District" => "out_of_area_school_district",
+			"Rating Year" => "rating_year",
+			"Reqd Doc Agent Infor" => "reqd_doc_agent_infor",
+			"Restriction Description" => "restriction_description",
+			"Sales Restrictions" => "sales_restrictions",
+			"Repairs Amount" => "repairs_amount",
+			"Sr High Other" => "sr_high_other",
+			"Water Access" => "water_access",
+			"Water Access Description" => "water_access_description",
+			"Documents Available" => "documents_available",
+			"Fixed Rate" => "fixed_rate",
+			"Interest Amount" => "interest_amount",
+			"Steps" => "steps",
+			"Laundry Facilities" => "laundry_facilities",
+			"Loan Amount" => "loan_amount",
+			"Sprinkler System" => "sprinkler_system",
+			"Sprinkler System Description" => "sprinkler_system_description",
+			"Unit Style" => "unit_style",
+			"# Total Baths" => "total_baths",
+			"Restrictions" => "restrictions",
+			"Sold/Lease Price" => "sold_lease_price",
+			"Buyer/Sub Agent Phone" => "buyer_sub_agent_phone",
+			"9 Gr/High School" => "ninth_gr_high_school",
+			"Variable Rate Commission" => "variable_rate_commission",
+			"School District" => "school_district",
+			"Open House Date - Public" => "open_house_date__public",
+			"Open House Time - Public" => "open_house_time__public",
+			"HOA Management Co" => "hoa_management_co",
+			"Rating Achieved" => "rating_achieved",
+			"Community Web Site" => "community_web_site",
+			"Elementary A" => "elementary_a",
+			"Elementary B" => "elementary_b",
+			"Senior High School" => "senior_high_school",
+			"Junior High School" => "junior_high_school",
+			"Middle School" => "middle_school",
+			"Seller Points" => "seller_points",
+			"Sewer" => "sewer",
+			"Also Listed As" => "also_listed_as",
+			"Show Instruction" => "show_instruction",
+			"Sign On Property" => "sign_on_property",
+			"Sold/Leased Comments" => "sold_leased_comments",
+			"Sold Terms" => "sold_terms",
+			"Special Assessment" => "special_assessment",
+			"LP$/SqFt" => "lp_sqft",
+			"Square Foot Source" => "square_foot_source",
+			"Internet Display" => "internet_display",
+			"Allow Automated Valuations" => "allow_automated_valuations",
+			"Allow 3rd Party Comments" => "allow_3rd_party_comments",
+			"Square Feet" => "square_feet",
+			"Appraisal Amount" => "appraisal_amount",
+			"Status Change Date" => "status_change_date",
+			"# Stories" => "stories",
+			"Street Name" => "street_name",
+			"Body of Water" => "body_of_water",
+			"Street #" => "street",
+			"Street Number" => "street_number",
+			"Subdivision" => "subdivision",
+			"Area" => "area",
+			"Estimated Taxes" => "estimated_taxes",
+			"PID" => "pid",
+			"Tax Rate" => "tax_rate",
+			"Tax Year" => "tax_year",
+			"Temp Off Market Date" => "temp_off_market_date",
+			"Title" => "listin_title",
+			"Title Company" => "title_company",
+			"Total Points" => "total_points",
+			"HOA Transfer Fee" => "hoa_transfer_fee",
+			"Trees" => "trees",
+			"Unit" => "unit",
+			"Water" => "water",
+			"HOA $" => "hoa",
+			"Waterfront" => "waterfront",
+			"Waterfront Description" => "waterfront_description",
+			"Withdrawn Date" => "withdrawn_date",
+			"Year Built" => "year_built",
+			"Year Built Desc" => "year_built_desc",
+			"Zip" => "zip",
+			"Area Amenities" => "area_amenities",
+			"Acres" => "acres",
+			"HOA Fee Includes" => "hoa_fee_includes",
+			"HOA Frequency" => "hoa_frequency",
+			"HOA Requirement" => "hoa_requirement",
+			"Back On Market Date" => "back_on_market_date",
+			"# Bedrooms" => "bedrooms",
+			"# Blocks to Metro" => "blocks_to_metro",
+			"# Blocks to UT Shuttle" => "blocks_to_ut_shuttle",
+			"Bonus to BA" => "bonus_to_ba",
+			"Bonus BA/LA Amount" => "bonus_ba_la_amount",
+			"Buyers Clsg Cost Pd by Sell" => "buyers_clsg_cost_pd_by_sell",
+			"Buyer Incentive" => "buyer_incentive",
+			"Buyer Points" => "buyer_points",
+			"City" => "city",
+			"Sold/Lease Date" => "sold_lease_date",
+			"Buyer Agent Amount" => "buyer_agent_amount",
+			"Buyer Agent" => "buyer_agent",
+			"Sub Agent Amount" => "sub_agent_amount",
+			"Sub Agent" => "sub_agent",
+			"Contingency Date" => "contingency_date",
+			"A/C" => "a_c",
+			"Parking" => "parking",
+			"Faces" => "faces",
+			"Guest Accommodations" => "guest_accommodations",
+			"Master Description" => "master_description",
+			"# Other Level Beds" => "other_level_beds",
+			"Kitchen" => "kitchen",
+			"GA Description" => "ga_description",
+			"ML # to be Copied" => "ml__to_be_copied",
+			"# Horses Allowed" => "horses_allowed",
+			"Pool Descr on Prop" => "pool_descr_on_prop",
+			"# Half Baths" => "half_baths",
+			"Access Instruction" => "access_instruction",
+			"# Main Level Beds" => "main_level_beds",
+			"# Garage Spaces" => "garage_spaces",
+			"# Dining" => "dining",
+			"Exterior Features" => "exterior_features",
+			"County" => "county",
+			"Fireplace Description" => "fireplace_description",
+			"Interior Features" => "interior_features",
+			"Roof" => "roof",
+			"Appliances/Equipment" => "appliances_equipment",
+			"Construction" => "construction",
+			"Laundry Location" => "laundry_location",
+			"Lockbox Location" => "lockbox_location",
+			"# Living" => "living",
+			"Dining Description" => "dining_description",
+			"Horses" => "horses",
+			"Energy Efficient" => "energy_efficient",
+			"Master Main" => "master_main",
+			"Utilities" => "utilities",
+			"# Fireplaces" => "fireplaces",
+			"Rooms" => "rooms",
+			"# Full Baths" => "full_baths",
+			"Builder Name" => "builder_name",
+			"Garage Description" => "garage_description",
+			"Directions" => "directions",
+			"Listing Agent 2 ID" => "listing_agent_2_id",
+			"ETJ" => "etj",
+			"Expire Date" => "expire_date",
+			"Fence" => "fence",
+			"FEMA 100 Yr Flood Plain" => "fema_100_yr_flood_plain",
+			"Floor" => "floor",
+			"Foundation" => "foundation",
+			"Gated Community" => "gated_community",
+			"Disability Features" => "disability_features",
+			"Heat" => "heat",
+			"IDX" => "idx",
+			"Intermediary" => "intermediary",
+			"Prop Addr (Internet)" => "prop_addr_internet",
+			"Austinhomesearch.com" => "austinhomesearch_com",
+			"Legal Description" => "legal_description",
+			"Listing Agreement Document" => "listing_agreement_document",
+			"Listing Agreement Type" => "listing_agreement_type",
+			"List Date" => "list_date",
+			"Listing Agent ID" => "listing_agent_id",
+			"Buyer/Sub Agent ID" => "buyer_sub_agent_id",
+			"Listing Office ID" => "listing_office_id",
+			"Buyer/Sub Office ID" => "buyer_sub_office_id",
+			"List Price" => "list_price",
+			"Original List Price" => "original_list_price",
+			"Status" => "status",
+			"Listing Agent Fax" => "listing_agent_fax",
+			"New Loan Amount" => "new_loan_amount",
+			"Acceptable Financing" => "acceptable_financing",
+			"Type of Lien" => "type_of_lien",
+			"Lot Description" => "lot_description",
+			"Lot Size" => "lot_size",
+			"MAPSCO Grid" => "mapsco_grid",
+			"RecordDeleteFlag" => "recorddeleteflag",
+			"Listing Agent Name" => "listing_agent_name",
+			"Prev List Price" => "prev_list_price",
+			"Street Pre Dir" => "street_pre_dir",
+			"MAPSCO Page" => "mapsco_page",
+			"CDOM" => "cdom",
+			"MLS #" => "mls",
+			"Address" => "address",
+			"Modified" => "modified",
+			"Virtual Tour-Non-Branded" => "virtual_tour_non_branded",
+			"Occupant" => "occupant",
+			"LPSqft" => "lpsqft",
+			"LastImgTransDate" => "lastimgtransdate",
+			"Occupant Phone" => "occupant_phone",
+			"Listing Office 2" => "listing_office_2",
+			);
+			*/

@@ -1,0 +1,456 @@
+<?php
+/*
+    This file is part of FoxyIDX.
+
+    Foobar is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    FoxyIDX is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+
+    Author: Brian P Johnson
+    Contact: brian@pjohnson.info
+*/
+
+function foxyidx_schema() {
+
+	$schema['foxyidx_property'] = array(
+			'description' => 'The base table for foxyidx property listing.',
+			'fields' => array(
+				'foxyidx_id' => array(
+					'description' => 'Primary key with type; a unique id for the item.',
+					'type' => 'serial',
+					'size' => 'big',
+					'not null' => TRUE,
+					'unsigned' => TRUE,
+					),
+				'foxyidx_class_id' => array(
+					'description' => 'The class type of listing.',
+					'type' => 'varchar',
+					'length' => 10,
+					'not null' => TRUE,
+					'default' => '',
+					),
+				'foxyidx_node_id' => array(
+					'description' => 'The drupal node_id for this property, NULL if none. i.e property page.',
+					'type' => 'int',
+					'not null' => FALSE,
+					'unsigned' => TRUE,
+					'default' => NULL,
+					),
+				'foxyidx_date' => array(
+					'description' => 'The date this record is created/updated.',
+					'type' => 'varchar',
+					'length' => 8,
+					'not null' => TRUE,
+					'default' => '',
+					),
+				),
+				'primary key' => array('foxyidx_id'),
+				'indexes' => array(
+					'fp_date' => array('foxyidx_date'),
+					),
+				);
+
+	$schema['foxyidx_property_attribute'] = array(
+			'description' => 'The attribute table for foxyidx property listing.',
+			'fields' => array(
+				'foxyidx_id' => array(
+					'description' => 'Primary key with type; a unique id for the item.',
+					'type' => 'serial',
+					'size' => 'big',
+					'not null' => TRUE,
+					'unsigned' => TRUE,
+					),
+				'foxyidx_property_id' => array(
+					'description' => 'The relational hook to the property.',
+					'type' => 'int',
+					'not null' => FALSE,
+					'unsigned' => TRUE,
+					'default' => NULL,
+					),
+				'foxyidx_system_name' => array(
+					'description' => 'The relational hook to the property.',
+					'type' => 'varchar',
+					'length' => 12,
+					'not null' => TRUE,
+					'default' => '',
+					),
+				'foxyidx_date' => array(
+					'description' => 'The date this record is created/updated.',
+					'type' => 'varchar',
+					'length' => 8,
+					'not null' => TRUE,
+					'default' => '',
+					),
+				'foxyidx_value' => array(
+					'description' => 'serialized value.',
+					'type' => 'text',
+					'size' => 'normal',
+					'not null' => TRUE,
+					),
+				),
+				'primary key' => array('foxyidx_id'),
+				'indexes' => array(
+					'fpa_field_SystemName' => array('foxyidx_system_name'),
+					'fpa_property_id' => array('foxyidx_property_id'),
+					'fpa_date' => array('foxyidx_date'),
+					),
+				);
+
+
+	$schema['foxyidx_fields'] = array(
+			'fields' => array(
+				'foxyidx_id' => array(
+					'description' => 'The ID of the select field',
+					'type' => 'serial',
+					'size' => 'big',
+					'not null' => TRUE,
+					'unsigned' => TRUE,
+					),
+				'foxyidx_Date' => array(
+					'description' => 'Date of insert.',
+					'type' => 'varchar',
+					'length' => '8',
+					'not null' => TRUE,
+					'default' => '09122011',
+					),
+				'foxyidx_ClassID' => array(
+					'description' => 'resource relevant to the Field.',
+					'type' => 'varchar',
+					'length' => 20,
+					'not null' => TRUE,
+					'default' => '',
+					),
+				'foxyidx_SystemName' => array(
+					'description' => 'the system/query name of the Field.',
+					'type' => 'varchar',
+					'length' => 50,
+					'not null' => TRUE,
+					'default' => '',
+					),
+				'foxyidx_LongName' => array(
+					'description' => 'the human readable name of the Field.',
+					'type' => 'varchar',
+					'length' => 50,
+					'not null' => TRUE,
+					'default' => '',
+					),
+				'foxyidx_DataType' => array(
+					'description' => 'data type of the Field.',
+					'type' => 'varchar',
+					'length' => 50,
+					'not null' => TRUE,
+					'default' => '',
+					),
+				'foxyidx_MaximumLength' => array(
+					'description' => 'the max length of the Field.',
+					'type' => 'int',
+					'size' => 'small',
+					'not null' => TRUE,
+					'default' => 0,
+					'unsigned' => TRUE,
+					),
+				'foxyidx_Precision' => array(
+					'description' => 'the precision of the Field.',
+					'type' => 'int',
+					'size' => 'small',
+					'not null' => TRUE,
+					'default' => 0,
+					'unsigned' => TRUE,
+					),
+				'foxyidx_UseSeparator' => array(
+					'description' => 'use a separator on the Field.',
+					'type' => 'int',
+					'size' => 'small',
+					'not null' => TRUE,
+					'default' => 0,
+					'unsigned' => TRUE,
+					),
+				'foxyidx_Interpretation' => array(
+					'description' => 'does the Field use a lookup table.',
+					'type' => 'varchar',
+					'length' => 30,
+					'not null' => TRUE,
+					'default' => '',
+					),
+				'foxyidx_LookupName' => array(
+					'description' => 'lookup name to find lookup table for the Field.',
+					'type' => 'varchar',
+					'length' => 20,
+					'not null' => TRUE,
+					'default' => 0,
+					),
+				'foxyidx_MaxSelect' => array(
+					'description' => 'maximum values selectable in lookup table for the Field.',
+					'type' => 'int',
+					'size' => 'small',
+					'not null' => TRUE,
+					'default' => 0,
+					'unsigned' => TRUE,
+					),
+				'foxyidx_Searchable' => array(
+					'description' => 'can the Field be a filter.',
+					'type' => 'int',
+					'size' => 'small',
+					'not null' => TRUE,
+					'default' => 0,
+					'unsigned' => TRUE,
+					),
+				'foxyidx_Required' => array(
+					'description' => 'Is the Field required.',
+					'type' => 'int',
+					'size' => 'small',
+					'not null' => TRUE,
+					'default' => 0,
+					'unsigned' => TRUE,
+					),
+				),
+				'primary key' => array('foxyidx_id'),
+				'indexes' => array(
+					'ff_ClassID' => array('foxyidx_ClassID'),
+					'ff_SystemName' => array('foxyidx_SystemName'),
+					'ff_Searchable' => array('foxyidx_Searchable'),
+					),
+				);
+
+	$schema['foxyidx_lookup_table'] = array(
+			'fields' => array(
+				'foxyidx_id' => array(
+					'description' => 'The ID of the lookup table',
+					'type' => 'serial',
+					'size' => 'big',
+					'not null' => TRUE,
+					'unsigned' => TRUE,
+					),
+				'foxyidx_Date' => array(
+					'description' => 'Date of insert.',
+					'type' => 'varchar',
+					'length' => '8',
+					'not null' => TRUE,
+					'default' => '20110912',
+					),
+				'foxyidx_ClassID' => array(
+					'description' => 'resource type relevant to the Field.',
+					'type' => 'varchar',
+					'length' => 20,
+					'not null' => TRUE,
+					'default' => '',
+					),
+				'foxyidx_LookupName' => array(
+					'description' => 'lookup name to find lookup table for the Field.',
+					'type' => 'varchar',
+					'length' => 20,
+					'not null' => TRUE,
+					'default' => '',
+					),
+				'foxyidx_LongValue' => array(
+					'description' => 'long value for lookup table item.',
+					'type' => 'text',
+					'size' => 'normal',
+					'not null' => TRUE,
+					),
+				'foxyidx_ShortValue' => array(
+					'description' => 'short value for lookup table item.',
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'default' => '',
+					),
+				'foxyidx_Value' => array(
+					'description' => 'value for lookup table item.',
+					'type' => 'varchar',
+					'length' => 255,
+					'not null' => TRUE,
+					'default' => '',
+					),
+				),
+			'primary key' => array('foxyidx_id'),
+			'indexes' => array(
+				'flt_ClassID' => array('foxyidx_ClassID'),
+				'flt_LookupName' => array('foxyidx_LookupName'),
+				),
+			);
+
+	return $schema;
+}
+
+function foxyidx_install() {
+
+	set_time_limit(0);
+
+}
+
+function foxyidx_enable() {
+
+	set_time_limit(0);
+	drupal_install_schema('foxyidx');
+
+}
+
+function foxyidx_disable() {
+
+	set_time_limit(0);
+	listing_uninstall();
+	drupal_uninstall_schema('foxyidx');
+
+}
+
+function foxyidx_uninstall() {
+
+	set_time_limit(0);
+
+}
+
+function listing_uninstall() {
+  // Gather all the example content that might have been created while this
+  // module was enabled.  Simple selects still use db_query().
+  // http://api.drupal.org/api/function/db_query/7
+  $sql = 'SELECT nid FROM {node} n WHERE n.type = :type';
+  $result = db_query($sql, array(':type' => 'listing'));
+  $nids = array();
+  foreach ($result as $row) {
+    $nids[] = $row->nid;
+  }
+
+  // Delete all the nodes at once
+  // http://api.drupal.org/api/function/node_delete_multiple/7
+  node_delete_multiple($nids);
+
+
+  // Loop over each of the fields defined by this module and delete
+  // all instances of the field, their data, and the field itself.
+  // http://api.drupal.org/api/function/field_delete_field/7
+  $cck = _listing_instance_fields();
+	
+  foreach (array_keys($cck['fields']) as $field) {
+    field_delete_field($field);
+  }
+
+  // Delete our content type
+  // http://api.drupal.org/api/function/node_type_delete/7
+  node_type_delete('listing');
+
+  // Purge all field information
+  // http://api.drupal.org/api/function/field_purge_batch/7
+  field_purge_batch(1000);
+}
+
+function _listing_instance_fields() {
+
+	$all_fields = foxyidx_load_all_fields('4');
+
+	$cck = array();
+	$cck['fields'] = array();
+	$cck['instances'] = array();
+
+	$dataTypes = array(
+			"Int" => "Integer",
+			"Decimal" => "Decimal",
+			"Character" => "text",
+			"Small" => "Integer",
+			"DateTime" => "text"
+			);
+
+	while($field_info = $all_fields->fetchObject()) {
+		
+		$field_ref = "field_".$field_info->foxyidx_systemname;
+		$field_type = $dataTypes[$field_info->foxyidx_datatype];
+		$label = $field_info->foxyidx_longname;
+		$length = $field_info->foxyidx_maximumlength;
+
+		if($length <= 256) {
+
+			$cck['fields'][$field_ref] = array(
+					'field_name' => $field_ref,
+					'label' => t($label),
+					'cardinality' => 1,
+					'type' => 'text',
+					);
+			$cck['instances'][$field_ref] = array(
+					'field_name'  => $field_ref,
+					'label'       => t($label),
+					'cardinality' => 1,
+					'widget'      => array(
+						'type'       => 'text_textfield',
+						'settings'   => array('size' => $length),
+						),
+					'display' => array(
+						'default' => array(
+							'label' => 'hidden',
+							'type' => 'text_default',
+							'settings' => array(),
+							'weight' => 0,
+							),
+						),
+					);
+		}
+		else {
+			$cck['fields'][$field_ref] = array(
+					'field_name' => $field_ref,
+					'label' => t($label),
+					'cardinality' => 1,
+					'type' => 'text_with_summary',
+					);
+			$cck['instances'][$field_ref] = array(
+					'field_name'  => $field_ref,
+					'label'       => t($label),
+					'cardinality' => 1,
+					'widget' => array(
+						'type' => 'text_textarea_with_summary',
+						'settings' => array(
+							'rows' => 10,
+							'summary_rows' => 3,
+							),
+						'weight' => 0,
+						),
+					'settings' => array(
+						'display_summary' => TRUE,
+						'text_processing' => 1, // @TODO Find out the name
+						),
+					'display' => array(
+						'default' => array(
+							'label' => 'hidden',
+							'type' => 'text_default',
+							'settings' => array(),
+							'weight' => 0,
+							),
+						),
+					);
+		}
+	}
+	return $cck;
+}
+
+function foxyidx_load_all_fields ( $classID ) {
+
+	$fields = db_select('foxyidx_fields', 'ff')
+		->fields('ff', array(
+					'foxyidx_id',
+					'foxyidx_Date',
+					'foxyidx_ClassID',
+					'foxyidx_SystemName',
+					'foxyidx_LongName',
+					'foxyidx_DataType',
+					'foxyidx_MaximumLength',
+					'foxyidx_Precision',
+					'foxyidx_UseSeparator',
+					'foxyidx_Interpretation',
+					'foxyidx_LookupName',
+					'foxyidx_MaxSelect',
+					'foxyidx_Searchable',
+					'foxyidx_Required'
+					))
+		->condition('ff.foxyidx_ClassID', $classID)
+		->groupBy('ff.foxyidx_SystemName')
+		->orderBy('ff.foxyidx_LongName', 'ASC')
+		->execute();
+	return $fields;
+}

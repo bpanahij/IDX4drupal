@@ -1,0 +1,81 @@
+/*
+    This file is part of FoxyIDX.
+
+    Foobar is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    FoxyIDX is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+
+    Author: Brian P Johnson
+    Contact: brian@pjohnson.info
+*/
+
+
+#property_page {
+  width: 900px;
+  margin:  0 auto;
+  background-color: #FFE;
+  box-shadow: 10px 10px 5px #AAA;
+  border: 1px solid #99B;
+}
+
+img {}
+
+.listing_image {
+  width:  100%;
+  border:  3px solid black;
+}
+
+.listing-attr tr:nth-child(odd) {
+  background-color: #EEE;
+}
+
+.listing-attr tr:nth-child(even) {
+  background-color: #EEF;
+}
+
+.listing-split-left {
+  width:  50%;
+  vertical-align:text-top;
+}
+
+.listing-split-right {
+  width:  50%;
+  vertical-align:text-top;
+}
+
+property tr {
+  padding: 10px;
+}
+
+td {
+  padding:  5px;
+}
+
+emphasis {
+  color: red;
+}
+
+smalltitle {
+  font-size: 0.7em;
+  font-weight: bold;
+}
+
+.nearby {
+  color: red;
+}
+
+#map_canvas {
+  border: 2px solid #99B;
+  background: #FFF;
+  width: 350px;
+  height: 400px;
+}

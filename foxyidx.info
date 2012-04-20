@@ -1,0 +1,15 @@
+name = FoxyIDX
+description = Creates an SEO optimized MLS listings in your area.
+package = Foxy IDX
+core = 7.x
+files[] = foxyidx.module
+files[] = foxyidx.install
+files[] = node--property.tpl.php
+files[] = node--listing--full.tpl.php
+files[] = field.tpl.php
+dependencies[] = elysia_cron
+stylesheets[all][] = foxyidx_property.css
+stylesheets[all][] = listing.css
+scripts[] = hoverIntent.js
+scripts[] = foxyidx_property.js
+scripts[] = googleAPI.js

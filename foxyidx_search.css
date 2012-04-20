@@ -1,0 +1,47 @@
+/*
+    This file is part of FoxyIDX.
+
+    Foobar is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    FoxyIDX is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+
+    Author: Brian P Johnson
+    Contact: brian@pjohnson.info
+*/
+
+.foxyidx_fields {
+	background: #DDD;	
+	width: 100%;
+	display: block;
+	padding: 3px;
+}
+.foxyidx_field, .foxyidx_field_add {
+	display: block;
+	width: 100%;
+	height: 2em;
+}
+.foxyidx_field input {
+	float: left;
+}
+.foxyidx_field div {
+	float: left;
+	padding: 0px;
+	margin: 0px;
+}
+.form-edit, .form-item {
+	padding: 0px;
+	margin: 0px;
+}
+input.foxyidx_field_remove {
+	padding: 0px;
+	margin: 0px;
+}

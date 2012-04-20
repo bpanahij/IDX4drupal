@@ -1,0 +1,58 @@
+<?php
+/*
+    This file is part of FoxyIDX.
+
+    Foobar is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    FoxyIDX is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Foobar.  If not, see <http://www.gnu.org/licenses/>.
+
+    Author: Brian P Johnson
+    Contact: brian@pjohnson.info
+*/
+
+
+class FoxyidxTestCase extends DrupalWebTestCase{
+	public static function getInfo(){
+		return array(
+				'name' => 'FoxyIDX module functionality',
+				'description' => 'Tests hooks in the FoxyIDX module',
+				'group' => 'FoxyIDX',
+			    ); 
+		public function setUp(){
+			parent::setUp('foxyidx');
+		}
+	}
+
+	public function testPermission() {
+		$data = module_invoke('foxyidx', 'permission');
+		$this->assertTrue(is_array($data), t('Permission hook returns array.'));
+
+		$this->assertTrue(array_key_exists('access foxyidx content', $data),
+				t('Permission is as expected.'));
+	}
+
+	public function testMenu() {
+		$items = module_invoke('foxyidx', 'menu');
+
+		$this->assertEqual(2, count($items), t('Two items in menu.'));
+
+		$this->assertIdentical($items['admin/config/services/foxyidx']['title'], 
+				$items['foxyidx']['title'], t('Titles are identical.'));
+	}
+
+	public function testBlockView() {
+		$data = module_invoke('foxyidx', 'block_view', 'foxyidx');
+
+		$this->assertEqual(t('FoxyIDX'), $data['subject'], t('Subject is as expected.'));
+
+		$this->assertNotNull($data['content'], t('Block contains data.'));
+	}
