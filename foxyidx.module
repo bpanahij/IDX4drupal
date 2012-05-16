@@ -732,10 +732,10 @@ function foxyidx_create_property_nodes ( ) {
 
 		$all_fields = foxyidx_load_all_fields_m('4');
 		$error = "";
-		$fp = fopen('/tmp/fields','a+');
+		//$fp = fopen('/tmp/fields','a+');
 		while($field_info = $all_fields->fetchObject()) {
 
-			fwrite($fp, var_export($field_info,true));
+			//fwrite($fp, var_export($field_info,true));
 			$field_ref = "field_".$field_info->foxyidx_systemname;
 			$field_arr = array(
 					$node->language => array(
@@ -746,7 +746,7 @@ function foxyidx_create_property_nodes ( ) {
 					);
 			$node->$field_ref = $field_arr;
 		}
-		fclose($fp);
+		//fclose($fp);
 
 		$node->title = "{$pa['Street Number']} {$pa['Street Name']} \n{$pa['City']} {$pa['State']} {$pa['Zip']}\n\${$pa['List Price']} | MLS # {$pa['MLS #']}";
 
@@ -791,7 +791,7 @@ function foxyidx_js_alter($javascript) {
 
 function foxyidx_theme_registry_alter(&$theme_registry) {
 	$mod_path = drupal_get_path('module', 'foxyidx');
-	$theme_registry_copy = $theme_registry;       // munge on a copy
+	$theme_registry_copy = $theme_registry;
 	_theme_process_registry($theme_registry_copy, 'phptemplate', 'theme_engine', 'pow', $mod_path);
 	$theme_registry += array_diff_key($theme_registry_copy, $theme_registry);
 	$hooks = array('node');
@@ -949,14 +949,14 @@ function _listing_instance_fields_m() {
 			'field_name' => 'field_image',
 			'label' => t('Listing Image'),
 			'cardinality' => 1,
-			'type' => 'text_with_summary',
+			'type' => 'image',
 			);
 	$cck['instances']['field_image'] = array(
 			'field_name'  => 'field_image',
 			'label'       => t('Listing Image'),
 			'cardinality' => 1,
 			'widget' => array(
-				'type' => 'text_textarea_with_summary',
+				'type' => 'image',
 				'settings' => array(
 					'rows' => 10,
 					'summary_rows' => 3,
@@ -970,7 +970,7 @@ function _listing_instance_fields_m() {
 			'display' => array(
 				'default' => array(
 					'label' => 'hidden',
-					'type' => 'text_default',
+					'type' => 'image',
 					'settings' => array(),
 					'weight' => 0,
 					),

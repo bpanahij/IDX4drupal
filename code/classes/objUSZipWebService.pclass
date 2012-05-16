@@ -1,0 +1,69 @@
+<?php
+
+require_once('code/classes/objSOAPTypes.pclass');
+
+class SerializableRecord extends objSOAPTypes {
+	public function __construct($xml = false) {
+		$enumTypes = array(
+			);
+		$this->defineEnumeratedTypes($enumTypes);
+		parent::__construct();
+	}
+}
+
+
+class GetInfoByCity extends SerializableRecord {
+	public function __construct() {
+		$this->setChildren(array(
+            "USCity" =>	array("required" => 1, "nillable" => 0, "type" => "String", "xml" => TRUE)
+        ));
+		parent::__construct(false);
+	}
+}
+//    <USCity>string</USCity>
+
+
+
+
+class objUSZipWebService {
+	public function __construct($options=array()) {
+
+	}
+
+	public function GetInfoByCity($xml = "") {
+		$soapEnvelope = '<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+            <soap:Body>
+                <GetInfoByCity xmlns="http://www.webserviceX.NET">
+                    '.$xml.'
+                </GetInfoByCity>
+            </soap:Body>
+        </soap:Envelope>';
+		$headers = array(
+				"POST /uszip.asmx HTTP/1.1",
+                "Host: www.webservicex.net",
+				"Content-Type: text/xml",
+				"Accept: text/xml",
+				"Cache-Control: no-cache",
+				"Pragma: no-cache",
+				'SOAPAction: "http://www.webserviceX.NET/GetInfoByCity"',
+				"Content-Length: ".strlen($soapEnvelope)
+				);
+		$ch = curl_init();
+		global $sobj;
+		$options = array(
+                    CURLOPT_POST => 1,
+					CURLOPT_TIMEOUT => 0,
+					CURLOPT_RETURNTRANSFER => 1,
+					CURLOPT_SSL_VERIFYPEER => 0,
+					CURLOPT_URL => "http://www.webserviceX.NET/GetInfoByCity",
+					CURLOPT_HTTPHEADER => $headers,
+					CURLOPT_POSTFIELDS => $soapEnvelope
+				);
+		curl_setopt_array($ch, $options);
+		$response = curl_exec($ch);
+		if(curl_errno($ch)) die('Curl error: '.curl_error($ch));
+		curl_close($ch);
+		return $response;
+	}
+}
+?>
