@@ -55,7 +55,7 @@ function foxy_initialize() {
 	      map: map,
 	      icon: image,
 	      title: addressStr,
-	      optimized: false,
+	      optimized: false
 	  });
 	}
       }

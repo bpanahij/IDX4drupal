@@ -707,11 +707,13 @@ function foxyidx_load_lookups ( $classID, $lName ) {
 
 function foxyidx_create_property_nodes ( ) {
 
-	$properties = foxyidx_load_properties( 10 );
+	$properties = foxyidx_load_properties( 1 );
+
 	foreach( $properties as $property ) {
 
 		$attributes = foxyidx_load_attributes($property->foxyidx_id);
-		$body_text = '';
+        //error_log("Attributes:".var_export($attributes,true));
+
 		$pa = array();
 		foreach( $attributes as $attribute ) {
 
@@ -720,40 +722,36 @@ function foxyidx_create_property_nodes ( ) {
 					$attribute->foxyidx_system_name
 					);
 			$firstField = $fields->fetchObject();
-			$pa[$firstField->foxyidx_longname] = $attribute->foxyidx_value;
+			$pa[$firstField->foxyidx_LongName] = $attribute->foxyidx_value;
 
 		}
+        //error_log(var_export($pa,true));
 
-		$node = new stdClass();
+        $node = new stdClass();
 		$node->type = 'listing';
 		$node->language = LANGUAGE_NONE;
 
 		node_object_prepare($node);
 
 		$all_fields = foxyidx_load_all_fields_m('4');
-		$error = "";
-		$fp = fopen('/tmp/fields','a+');
 		while($field_info = $all_fields->fetchObject()) {
 
-			fwrite($fp, var_export($field_info,true));
-			$field_ref = "field_".$field_info->foxyidx_systemname;
+			//error_log("Field info:".var_export($field_info,true));
+			$field_ref = "field_".$field_info->foxyidx_SystemName;
 			$field_arr = array(
 					$node->language => array(
 						0 => array(
-							'value' => $pa[$field_info->foxyidx_longname],
+							'value' => $pa[$field_info->foxyidx_LongName],
 							),
 						)
 					);
 			$node->$field_ref = $field_arr;
 		}
-		fclose($fp);
-
-		$node->title = "{$pa['Street Number']} {$pa['Street Name']} \n{$pa['City']} {$pa['State']} {$pa['Zip']}\n\${$pa['List Price']} | MLS # {$pa['MLS #']}";
+        $node->title = "{$pa['Street Number']} {$pa['Street Name']} \n{$pa['City']} {$pa['State']} {$pa['Zip']}\n\${$pa['List Price']} | MLS # {$pa['MLS #']}";
 
 		$count = 0;
 		while(1) {	
 			$objIDX = createIDX();
-			$file = array();
 			$image = $objIDX->getPhoto($pa['sysid'],$count);
 			if(!preg_match('/ReplyCode/', $image)) {
 				$image_file = file_save_data($image);
@@ -768,6 +766,7 @@ function foxyidx_create_property_nodes ( ) {
 		$path = ''.$pa['State'].'/'.$pa['City'].'/'.$pa['Zip'].'/'.preg_replace('/ /','_',$pa['Street Number']).'-'.preg_replace('/ /','-',$pa['Street Name']);
 		$node->path = array('alias' => $path);
 
+        //error_log(var_export($node,true));
 		$node = node_submit($node);
 
 		node_save($node);
@@ -808,7 +807,6 @@ function _foxyidx_insert_after_first_element(&$a, $element) {
 }
 
 function listing_install() {
-
   // get the translation function relevant to our current localisation
   $t = get_t();
   // define the content type as an array (same as in hook_node_info())
@@ -879,11 +877,12 @@ function _listing_instance_fields_m() {
 			);
 
 	while($field_info = $all_fields->fetchObject()) {
-		
-		$field_ref = "field_".$field_info->foxyidx_systemname;
-		$field_type = $dataTypes[$field_info->foxyidx_datatype];
-		$label = $field_info->foxyidx_longname;
-		$length = $field_info->foxyidx_maximumlength;
+
+        //error_log(var_export($field_info,true));
+		$field_ref = "field_".$field_info->foxyidx_SystemName;
+		$field_type = $dataTypes[$field_info->foxyidx_DataType];
+		$label = $field_info->foxyidx_LongName;
+		$length = $field_info->foxyidx_MaximumLength;
 
 		if($length <= 256) {
 
