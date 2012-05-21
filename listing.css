@@ -60,11 +60,11 @@ td {
   padding:  5px;
 }
 
-emphasis {
+.emphasis {
   color: red;
 }
 
-smalltitle {
+.smalltitle {
   font-size: 0.7em;
   font-weight: bold;
 }
