@@ -1,6 +1,6 @@
 <?php
 
-require_once('code/classes/objSOAPTypes.pclass');
+require_once('objSOAPTypes.pclass');
 
 class SerializableRecord extends objSOAPTypes {
 	public function __construct($xml = false) {

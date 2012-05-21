@@ -32,6 +32,7 @@ class objSOAPTypes implements ArrayAccess, Iterator {
 		if(in_array($name, array_keys($this->parameters))) $this->pdata[$name] = $value;
 		elseif(in_array($name, array_keys($this->children))) $this->cdata[$name] = $value;
 		else return FALSE;
+        return TRUE;
 	}
 
 	public function __get($name) {
@@ -129,7 +130,7 @@ class objSOAPTypes implements ArrayAccess, Iterator {
 		$required = array();
 		foreach($this->elements as $elementName => $elementValues) {
 			if($elementValues["required"]) {
-				$required[] = $paramName;
+				$required[] = $elementName;
 			}
 		}
 		return $required;
